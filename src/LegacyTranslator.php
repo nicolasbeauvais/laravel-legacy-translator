@@ -192,7 +192,7 @@ class LegacyTranslator
             $content .= $child->isTextNode() ? $child->text() : $child->html();
         }
 
-        return app('blade.compiler')->compileString($content);
+        return trim(app('blade.compiler')->compileString($content));
     }
 
     public function translateElement(Element $element, string $key)

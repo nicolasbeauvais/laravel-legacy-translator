@@ -98,7 +98,11 @@ class SearchCommand extends Command
             return;
         }
 
-        $this->translator->translateElement($element, $key);
+        if ($this->translator->translateElement($element, $key)) {
+            $this->line("Element translated !\n", 'fg=black;bg=green');
+        } else {
+            $this->warn('Couldn\'t replace text by translation in blade file');
+        }
     }
 
     private function checkKey($key)

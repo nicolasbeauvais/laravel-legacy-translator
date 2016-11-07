@@ -126,7 +126,7 @@ class LegacyTranslator
     public function tableElement(Element $element) : array
     {
         return [
-            html_entity_decode($this->cleanElement($element)->html()),
+            html_entity_decode($this->getOriginalElement($element)->html()),
             $this->getTranslatedElement($element, $this->hasAttribute($element)),
             $this->getTextForTranslation($element),
         ];
@@ -163,6 +163,12 @@ class LegacyTranslator
         return $element;
     }
 
+    public function getOriginalElement(Element $element) : Element
+    {
+        $element = $this->cleanElement($element);
+
+        return $element->setInnerHtml(trim($element->innerHtml()));
+    }
     public function getTranslatedElement(Element $element, bool $hasAttributes = false, $key = null) : Element
     {
         $cleanElement = $this->emptyElement($this->cleanElement($element, $key ? true : false));
@@ -182,7 +188,7 @@ class LegacyTranslator
         $element = $this->cleanElement($element);
 
         if (count($element->children()) === 1) {
-            return app('blade.compiler')->compileString($element->text());
+            return trim(app('blade.compiler')->compileString($element->text()));
         }
 
         $content = '';
@@ -195,28 +201,34 @@ class LegacyTranslator
         return trim(app('blade.compiler')->compileString($content));
     }
 
-    public function translateElement(Element $element, string $key)
+    public function translateElement(Element $element, string $key) : bool
     {
-        $this->translateElementInTemplate($element, $key);
+        if (!$this->translateElementInTemplate($element, $key)) {
+            return false;
+        }
 
         if (trans($key) === $key) {
             $this->createLaravelTranslation($element, $key);
         }
+
+        return true;
     }
 
     private function translateElementInTemplate(Element $element, string $key)
     {
-        $this->replaceInView(
+        return $this->replaceInView(
             html_entity_decode($element->html()),
             $this->getTranslatedElement($element, $this->hasAttribute($element), $key)->html()
         );
     }
 
-    private function replaceInView(string $search, string $replace)
+    private function replaceInView(string $search, string $replace) : bool
     {
-        $content = str_replace($search, $replace, file_get_contents($this->view->getPath()));
+        $content = str_replace($search, $replace, file_get_contents($this->view->getPath()), $count);
 
         file_put_contents($this->view->getPath(), $content);
+
+        return $count > 0;
     }
 
     private function createLaravelTranslation($element, $key)
